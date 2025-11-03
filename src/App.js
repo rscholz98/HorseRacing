@@ -201,10 +201,6 @@ function App() {
   return players.filter((player) => bets[player].suit === winner);
  };
 
- const getLosers = () => {
-  return players.filter((player) => bets[player].suit !== winner);
- };
-
  // Render different screens based on game state
  if (gameState === "setup") {
   return (
