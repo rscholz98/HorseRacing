@@ -1,6 +1,6 @@
 /** @format */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 
 const SUITS = ["♥", "♦", "♣", "♠"];
@@ -12,17 +12,60 @@ const SUIT_COLORS = {
  "♠": "#2c3e50",
 };
 
+// Load state from localStorage
+const loadState = () => {
+ try {
+  const savedState = localStorage.getItem("horseRacingGame");
+  if (savedState) {
+   return JSON.parse(savedState);
+  }
+ } catch (error) {
+  console.error("Error loading state:", error);
+ }
+ return null;
+};
+
 function App() {
- const [gameState, setGameState] = useState("setup");
- const [players, setPlayers] = useState([]);
+ const savedState = loadState();
+
+ const [gameState, setGameState] = useState(savedState?.gameState || "setup");
+ const [players, setPlayers] = useState(savedState?.players || []);
  const [playerInput, setPlayerInput] = useState("");
- const [bets, setBets] = useState({});
- const [horsePositions, setHorsePositions] = useState({ "♥": 0, "♦": 0, "♣": 0, "♠": 0 });
- const [sideCards, setSideCards] = useState([]);
- const [revealedSideCards, setRevealedSideCards] = useState([]);
- const [deck, setDeck] = useState([]);
- const [currentCard, setCurrentCard] = useState(null);
- const [winner, setWinner] = useState(null);
+ const [bets, setBets] = useState(savedState?.bets || {});
+ const [horsePositions, setHorsePositions] = useState(
+  savedState?.horsePositions || { "♥": 0, "♦": 0, "♣": 0, "♠": 0 }
+ );
+ const [sideCards, setSideCards] = useState(savedState?.sideCards || []);
+ const [revealedSideCards, setRevealedSideCards] = useState(savedState?.revealedSideCards || []);
+ const [deck, setDeck] = useState(savedState?.deck || []);
+ const [currentCard, setCurrentCard] = useState(savedState?.currentCard || null);
+ const [winner, setWinner] = useState(savedState?.winner || null);
+
+ // Save state to localStorage whenever it changes
+ useEffect(() => {
+  const state = {
+   gameState,
+   players,
+   bets,
+   horsePositions,
+   sideCards,
+   revealedSideCards,
+   deck,
+   currentCard,
+   winner,
+  };
+  localStorage.setItem("horseRacingGame", JSON.stringify(state));
+ }, [
+  gameState,
+  players,
+  bets,
+  horsePositions,
+  sideCards,
+  revealedSideCards,
+  deck,
+  currentCard,
+  winner,
+ ]);
 
  // Initialize deck
  const createDeck = () => {
@@ -150,6 +193,8 @@ function App() {
   setDeck([]);
   setCurrentCard(null);
   setWinner(null);
+  // Clear localStorage
+  localStorage.removeItem("horseRacingGame");
  };
 
  const getWinners = () => {
