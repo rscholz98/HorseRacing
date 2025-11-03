@@ -432,7 +432,7 @@ h3 {
 
 .reset-button {
  margin-top: 20px;
- padding: 16px 40px;
+ padding: 16px 16px;
  background: #3498db;
  color: white;
  border: none;
@@ -473,11 +473,6 @@ h3 {
 
  .drinks-selection {
   justify-content: center;
- }
-
- .race-container {
-  overflow-x: auto;
-  padding: 20px;
  }
 
  .horse-column {
