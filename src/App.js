@@ -126,13 +126,37 @@ function App() {
   localStorage.setItem("horseRacingGame", JSON.stringify(state));
  }, [gameState, players, horsePositions, sideCards, revealedSideCards, deck, currentCard, winner]);
 
+ const PLAYER_NAME_ALIASES = {
+  jens: "Jensi",
+  oli: "OchsenCock",
+  nils: "Ogrin",
+  paul: "Paulie",
+  florian: "Flori",
+ };
+
+ const normalizePlayerName = (rawName) => {
+  const trimmed = rawName.trim();
+  if (!trimmed) {
+   return "";
+  }
+
+  const alias = PLAYER_NAME_ALIASES[trimmed.toLowerCase()];
+  if (!alias) {
+   return trimmed;
+  }
+
+  return alias;
+ };
+
  const openModal = () => {
-  if (!playerInput.trim()) {
+  const normalizedName = normalizePlayerName(playerInput);
+
+  if (!normalizedName) {
    return;
   }
 
   const alreadyExists = players.some(
-   (player) => player.name.toLowerCase() === playerInput.trim().toLowerCase()
+   (player) => player.name.toLowerCase() === normalizedName.toLowerCase()
   );
 
   if (alreadyExists) {
@@ -141,7 +165,7 @@ function App() {
    return;
   }
 
-  setPendingPlayerName(playerInput.trim());
+  setPendingPlayerName(normalizedName);
   setPlayerInput("");
   setIsModalOpen(true);
  };
