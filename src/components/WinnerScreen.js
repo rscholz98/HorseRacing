@@ -9,7 +9,7 @@ const WinnerScreen = ({ winnerSuit, suitColors, players, onReset }) => {
  return (
   <div className="winner-overlay">
    <div className="winner-box">
-    <h2 style={{ color: suitColors[winnerSuit] }}>🎉 {winnerSuit} wins the race! 🎉</h2>
+    <h2 style={{ color: suitColors[winnerSuit] }}>🎉 {winnerSuit} wins 🎉</h2>
 
     <div className="winners">
      <h3>Payout</h3>
