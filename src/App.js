@@ -190,29 +190,45 @@ function App() {
   setDeck(restDeck);
   setCurrentCard(drawnCard);
 
-  setHorsePositions((prevPositions) => {
-   const updated = { ...prevPositions, [drawnCard.suit]: prevPositions[drawnCard.suit] + 1 };
+  const advancedPositions = {
+   ...horsePositions,
+   [drawnCard.suit]: (horsePositions[drawnCard.suit] || 0) + 1,
+  };
 
-   const minPosition = Math.min(...Object.values(updated));
-   const nextStageIndex = revealedSideCards.length;
+  const pendingReveals = [];
+  const adjustedPositions = { ...advancedPositions };
+  const maxStages = Math.min(sideCards.length, 5);
+  let nextStageIndex = revealedSideCards.length;
+  let minPosition = Math.min(...Object.values(adjustedPositions));
 
-   if (minPosition > nextStageIndex && nextStageIndex < 5) {
-    const stagedCard = sideCards[nextStageIndex];
-    setRevealedSideCards((prevCards) => [...prevCards, stagedCard]);
-
-    if (updated[stagedCard.suit] > 0) {
-     updated[stagedCard.suit] -= 1;
-    }
+  while (nextStageIndex < maxStages && minPosition > nextStageIndex) {
+   const stageCard = sideCards[nextStageIndex];
+   if (!stageCard) {
+    nextStageIndex += 1;
+    continue;
    }
 
-   const winningSuit = Object.keys(updated).find((suit) => updated[suit] >= 5);
-   if (winningSuit) {
-    setWinner(winningSuit);
-    setGameState("winner");
+   pendingReveals.push(stageCard);
+
+   if (adjustedPositions[stageCard.suit] > 0) {
+    adjustedPositions[stageCard.suit] -= 1;
    }
 
-   return updated;
-  });
+   nextStageIndex += 1;
+   minPosition = Math.min(...Object.values(adjustedPositions));
+  }
+
+  if (pendingReveals.length > 0) {
+   setRevealedSideCards((prevCards) => [...prevCards, ...pendingReveals]);
+  }
+
+  setHorsePositions(adjustedPositions);
+
+  const winningSuit = Object.keys(adjustedPositions).find((suit) => adjustedPositions[suit] >= 5);
+  if (winningSuit) {
+   setWinner(winningSuit);
+   setGameState("winner");
+  }
  };
 
  const resetGame = () => {
