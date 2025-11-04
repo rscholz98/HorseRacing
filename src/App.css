@@ -26,11 +26,13 @@ body {
 
 .App {
  min-height: 100vh;
- padding: 20px;
+ padding: clamp(16px, 4vw, 24px);
  color: #f5f5f5;
  display: flex;
  flex-direction: column;
  gap: 24px;
+ align-items: center;
+ width: 100%;
 }
 
 h1 {
@@ -60,7 +62,7 @@ h3 {
 
 /* Setup Screen */
 .setup-container {
- max-width: 600px;
+ width: min(100%, 520px);
  margin: 0 auto;
  background: rgba(255, 255, 255, 0.04);
  padding: 40px;
@@ -119,6 +121,7 @@ h3 {
  display: flex;
  justify-content: space-between;
  align-items: center;
+ gap: 12px;
  padding: 12px;
  margin-bottom: 10px;
  background: rgba(255, 255, 255, 0.03);
@@ -194,7 +197,7 @@ h3 {
 
 /* Betting Screen */
 .betting-container {
- max-width: 900px;
+ width: min(100%, 900px);
  margin: 0 auto;
  background: rgba(255, 255, 255, 0.04);
  padding: 40px;
@@ -346,6 +349,10 @@ h3 {
  border: 3px solid rgba(245, 245, 245, 0.6);
  animation: flip 0.5s;
 }
+.side-card-flash {
+ animation: bonus-flash 0.45s ease-in-out;
+ box-shadow: 0 0 18px rgba(255, 77, 79, 0.55);
+}
 
 @keyframes flip {
  0% {
@@ -359,18 +366,104 @@ h3 {
  }
 }
 
+@media (max-width: 600px) {
+ .player-item {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+ }
+
+ .player-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+ }
+
+ .player-summary-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+ }
+
+ .player-summary .player-meta {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+ }
+
+ .player-item-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+ }
+
+ .player-item-actions button {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  min-width: auto;
+ }
+}
 .horse {
  font-size: 3rem;
- animation: bounce 0.5s ease-in-out;
+ will-change: transform, opacity;
+}
+.horse-advance {
+ animation: horse-advance 1.5s cubic-bezier(0.17, 0.67, 0.29, 0.99);
+}
+.horse-retreat {
+ animation: horse-retreat-down 1.5s, horse-retreat-rise 0.6s ease-out 0.35s;
 }
 
-@keyframes bounce {
- 0%,
+@keyframes horse-advance {
+ 0% {
+  transform: translateY(60%) scale(0.95);
+  opacity: 0.4;
+ }
+ 70% {
+  transform: translateY(-8%);
+  opacity: 1;
+ }
+ 100% {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+ }
+}
+
+@keyframes horse-retreat-down {
+ 0% {
+  transform: translateY(-60%) scale(0.95);
+  opacity: 0.4;
+ }
+ 100% {
+  transform: translateY(10%);
+  opacity: 1;
+ }
+}
+
+@keyframes horse-retreat-rise {
+ 0% {
+  transform: translateY(10%);
+ }
  100% {
   transform: translateY(0);
  }
+}
+
+@keyframes bonus-flash {
+ 0% {
+  box-shadow: 0 0 0 rgba(255, 77, 79, 0);
+  border-color: rgba(255, 77, 79, 0.2);
+ }
  50% {
-  transform: translateY(-10px);
+  box-shadow: 0 0 25px rgba(255, 77, 79, 0.7);
+  border-color: rgba(255, 77, 79, 0.8);
+ }
+ 100% {
+  box-shadow: 0 0 0 rgba(255, 77, 79, 0);
+  border-color: rgba(245, 245, 245, 0.6);
  }
 }
 
@@ -591,7 +684,7 @@ h3 {
  box-shadow: 0 0 16px rgba(255, 77, 79, 0.45);
 }
 
-.modal-section input {
+.modal-section input:not(.modal-drink-display) {
  width: 80px;
  padding: 10px;
  font-size: 1rem;
@@ -600,6 +693,53 @@ h3 {
  text-align: center;
  background: rgba(0, 0, 0, 0.6);
  color: #f5f5f5;
+}
+
+.modal-drink-selector {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 12px;
+}
+
+.modal-drink-display {
+ width: 88px;
+ height: 52px;
+ border: 2px solid rgba(255, 255, 255, 0.2);
+ border-radius: 12px;
+ background: rgba(25, 25, 25, 0.85);
+ color: #f5f5f5;
+ font-size: 1.6rem;
+ font-weight: 600;
+ text-align: center;
+ letter-spacing: 2px;
+}
+
+.modal-drink-control {
+ width: 52px;
+ height: 52px;
+ border-radius: 12px;
+ border: 2px solid #f5f5f5;
+ background: #0f0f0f;
+ color: #f5f5f5;
+ font-size: 1.8rem;
+ font-weight: 700;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ cursor: pointer;
+ transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.modal-drink-control:hover:not(:disabled) {
+ transform: translateY(-2px);
+ box-shadow: 0 0 12px rgba(245, 245, 245, 0.25);
+}
+
+.modal-drink-control:disabled {
+ opacity: 0.35;
+ cursor: not-allowed;
+ box-shadow: none;
 }
 
 .modal-actions {
@@ -655,7 +795,7 @@ h3 {
 
  .betting-container,
  .setup-container {
-  padding: 20px;
+  padding: 24px;
  }
 
  .bet-row {
@@ -725,6 +865,18 @@ h3 {
   font-size: 1.5rem;
  }
 
+ .setup-container {
+  padding: 20px;
+ }
+
+ .player-input {
+  flex-direction: column;
+ }
+
+ .player-input button {
+  width: 100%;
+ }
+
  .race-container {
   gap: 5px !important;
   padding: 15px 5px !important;
@@ -768,4 +920,8 @@ h3 {
  .current-card {
   font-size: 2rem;
  }
+}
+
+.player-remove {
+ margin-left: 5px;
 }

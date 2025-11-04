@@ -12,6 +12,9 @@ const PlayScreen = ({
  deckLength,
  onDrawCard,
  isWinner,
+ horseAnimation,
+ flashingBonusIndices = [],
+ isAnimating = false,
 }) => {
  return (
   <>
@@ -23,7 +26,12 @@ const PlayScreen = ({
       const card = sideCards[stageIndex];
 
       return (
-       <div key={stageIndex} className={`side-card ${isRevealed ? "revealed" : "hidden"}`}>
+       <div
+        key={stageIndex}
+        className={`side-card ${isRevealed ? "revealed" : "hidden"} ${
+         flashingBonusIndices.includes(stageIndex) ? "side-card-flash" : ""
+        }`}
+       >
         {isRevealed && card ? (
          <span style={{ color: suitColors[card.suit], fontSize: "1.5rem" }}>
           {card.suit}
@@ -41,11 +49,25 @@ const PlayScreen = ({
     {suits.map((suit) => (
      <div key={suit} className="horse-column">
       <div className="column-header">-{suit}-</div>
-      {[4, 3, 2, 1, 0].map((position) => (
-       <div key={position} className="track-cell">
-        {horsePositions[suit] === position && <div className="horse">🐎</div>}
-       </div>
-      ))}
+      {[4, 3, 2, 1, 0].map((position) => {
+       const isOccupied = horsePositions[suit] === position;
+       const isActiveHorse = isOccupied && horseAnimation?.suit === suit;
+       const directionClass =
+        isActiveHorse && horseAnimation?.direction ? `horse-${horseAnimation.direction}` : "";
+
+       return (
+        <div key={position} className="track-cell">
+         {isOccupied && (
+          <div
+           key={`${suit}-${isActiveHorse ? horseAnimation.key : "still"}`}
+           className={`horse ${directionClass}`}
+          >
+           🐎
+          </div>
+         )}
+        </div>
+       );
+      })}
       <div className="suit-label" style={{ color: suitColors[suit] }}>
        {suit}
       </div>
@@ -54,7 +76,11 @@ const PlayScreen = ({
    </div>
 
    <div className="card-controls">
-    <button className="draw-button" onClick={onDrawCard} disabled={deckLength === 0 || isWinner}>
+    <button
+     className="draw-button"
+     onClick={onDrawCard}
+     disabled={deckLength === 0 || isWinner || isAnimating}
+    >
      Draw Card ({deckLength} left)
     </button>
 

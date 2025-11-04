@@ -1,6 +1,6 @@
 /** @format */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import InitScreen from "./components/InitScreen";
 import PlayScreen from "./components/PlayScreen";
 import SelectBetModal from "./components/SelectBetModal";
@@ -14,6 +14,8 @@ const SUIT_COLORS = {
  "♣": "#f5f5f5",
  "♠": "#f5f5f5",
 };
+
+const MAX_PLAYER_NAME_LENGTH = 20;
 
 const DEFAULT_POSITIONS = { "♥": 0, "♦": 0, "♣": 0, "♠": 0 };
 
@@ -31,9 +33,14 @@ const loadState = () => {
 
 const createPlayerId = () => `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
+const clampPlayerName = (rawName) => {
+ const safeName = typeof rawName === "string" ? rawName.trim() : "";
+ return safeName.slice(0, MAX_PLAYER_NAME_LENGTH);
+};
+
 const buildPlayer = (name, suit, drinks, id = createPlayerId()) => ({
  id,
- name,
+ name: clampPlayerName(name),
  suit,
  drinks,
 });
@@ -125,6 +132,7 @@ function App() {
  const [playerInput, setPlayerInput] = useState("");
  const [pendingPlayerName, setPendingPlayerName] = useState("");
  const [isModalOpen, setIsModalOpen] = useState(false);
+ const [editingPlayerId, setEditingPlayerId] = useState(null);
  const [horsePositions, setHorsePositions] = useState(
   savedState?.horsePositions || { ...DEFAULT_POSITIONS }
  );
@@ -133,6 +141,16 @@ function App() {
  const [deck, setDeck] = useState(savedState?.deck || []);
  const [currentCard, setCurrentCard] = useState(savedState?.currentCard || null);
  const [winner, setWinner] = useState(savedState?.winner || null);
+ const [horseAnimation, setHorseAnimation] = useState(null);
+ const [flashingBonusIndices, setFlashingBonusIndices] = useState([]);
+ const animationTimeoutsRef = useRef([]);
+ const [isAnimating, setIsAnimating] = useState(false);
+ const editingPlayer = useMemo(() => {
+  if (!editingPlayerId) {
+   return null;
+  }
+  return players.find((player) => player.id === editingPlayerId) || null;
+ }, [editingPlayerId, players]);
 
  useEffect(() => {
   const state = {
@@ -170,6 +188,10 @@ function App() {
   return alias;
  };
 
+ const handlePlayerInputChange = (value) => {
+  setPlayerInput(value.slice(0, MAX_PLAYER_NAME_LENGTH));
+ };
+
  const openModal = () => {
   const normalizedName = normalizePlayerName(playerInput);
 
@@ -177,8 +199,16 @@ function App() {
    return;
   }
 
+  if (normalizedName.length > MAX_PLAYER_NAME_LENGTH) {
+   alert(`Player names cannot exceed ${MAX_PLAYER_NAME_LENGTH} characters.`);
+   setPlayerInput(clampPlayerName(normalizedName));
+   return;
+  }
+
+  const sanitizedName = clampPlayerName(normalizedName);
+
   const alreadyExists = players.some(
-   (player) => player.name.toLowerCase() === normalizedName.toLowerCase()
+   (player) => player.name.toLowerCase() === sanitizedName.toLowerCase()
   );
 
   if (alreadyExists) {
@@ -187,16 +217,21 @@ function App() {
    return;
   }
 
-  setPendingPlayerName(normalizedName);
+  setPendingPlayerName(sanitizedName);
   setPlayerInput("");
+  setEditingPlayerId(null);
   setIsModalOpen(true);
  };
 
  const closeModal = (restoreInput = false) => {
-  if (restoreInput && pendingPlayerName) {
+  const wasEditing = editingPlayerId !== null;
+
+  if (restoreInput && pendingPlayerName && !wasEditing) {
    setPlayerInput(pendingPlayerName);
   }
+
   setPendingPlayerName("");
+  setEditingPlayerId(null);
   setIsModalOpen(false);
  };
 
@@ -204,12 +239,54 @@ function App() {
   if (!pendingPlayerName) {
    return;
   }
-  setPlayers((prevPlayers) => [...prevPlayers, buildPlayer(pendingPlayerName, suit, drinks)]);
+
+  if (pendingPlayerName.length > MAX_PLAYER_NAME_LENGTH) {
+   alert(`Player names cannot exceed ${MAX_PLAYER_NAME_LENGTH} characters.`);
+   return;
+  }
+
+  const duplicateName = players.some(
+   (player) =>
+    player.id !== editingPlayerId && player.name.toLowerCase() === pendingPlayerName.toLowerCase()
+  );
+
+  if (duplicateName) {
+   alert("Player name already exists.");
+   return;
+  }
+
+  if (editingPlayerId) {
+   setPlayers((prevPlayers) =>
+    prevPlayers.map((player) =>
+     player.id === editingPlayerId
+      ? { ...player, name: clampPlayerName(pendingPlayerName), suit, drinks }
+      : player
+    )
+   );
+  } else {
+   setPlayers((prevPlayers) => [
+    ...prevPlayers,
+    buildPlayer(clampPlayerName(pendingPlayerName), suit, drinks),
+   ]);
+  }
+
   closeModal();
  };
 
  const removePlayer = (playerId) => {
   setPlayers((prevPlayers) => prevPlayers.filter((player) => player.id !== playerId));
+ };
+
+ const editPlayer = (playerId) => {
+  const targetPlayer = players.find((player) => player.id === playerId);
+  if (!targetPlayer) {
+   return;
+  }
+
+  setEditingPlayerId(playerId);
+  setPendingPlayerName(clampPlayerName(targetPlayer.name));
+  setPlayerInput("");
+  setIsModalOpen(true);
  };
 
  const startGame = () => {
@@ -224,13 +301,48 @@ function App() {
   setHorsePositions({ ...DEFAULT_POSITIONS });
   setCurrentCard(null);
   setWinner(null);
+  setHorseAnimation(null);
+  setFlashingBonusIndices([]);
+  setIsAnimating(false);
   setGameState("play");
+ };
+
+ const clearAnimationTimeouts = () => {
+  animationTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+  animationTimeoutsRef.current = [];
+ };
+
+ useEffect(
+  () => () => {
+   clearAnimationTimeouts();
+  },
+  []
+ );
+
+ const scheduleAnimationTimeout = (callback, delay) => {
+  const timeoutId = setTimeout(() => {
+   callback();
+   animationTimeoutsRef.current = animationTimeoutsRef.current.filter((id) => id !== timeoutId);
+  }, delay);
+  animationTimeoutsRef.current.push(timeoutId);
+ };
+
+ const checkWinner = (positions) => {
+  const winningSuit = Object.keys(positions).find((suit) => positions[suit] >= 5);
+  if (winningSuit) {
+   setWinner(winningSuit);
+   setGameState("winner");
+  }
  };
 
  const drawCard = () => {
   if (deck.length === 0 || winner) {
    return;
   }
+
+  clearAnimationTimeouts();
+  setFlashingBonusIndices([]);
+  setIsAnimating(true);
 
   const [drawnCard, ...restDeck] = deck;
   setDeck(restDeck);
@@ -241,7 +353,10 @@ function App() {
    [drawnCard.suit]: (horsePositions[drawnCard.suit] || 0) + 1,
   };
 
-  const pendingReveals = [];
+  setHorsePositions(advancedPositions);
+  setHorseAnimation({ suit: drawnCard.suit, direction: "advance", key: Date.now() });
+
+  const animationSteps = [];
   const adjustedPositions = { ...advancedPositions };
   const maxStages = Math.min(sideCards.length, 5);
   let nextStageIndex = revealedSideCards.length;
@@ -249,39 +364,69 @@ function App() {
 
   while (nextStageIndex < maxStages && minPosition > nextStageIndex) {
    const stageCard = sideCards[nextStageIndex];
-   if (!stageCard) {
-    nextStageIndex += 1;
-    continue;
-   }
 
-   pendingReveals.push(stageCard);
+   if (stageCard) {
+    animationSteps.push({ index: nextStageIndex, card: stageCard });
 
-   if (adjustedPositions[stageCard.suit] > 0) {
-    adjustedPositions[stageCard.suit] -= 1;
+    if (adjustedPositions[stageCard.suit] > 0) {
+     adjustedPositions[stageCard.suit] -= 1;
+    }
    }
 
    nextStageIndex += 1;
    minPosition = Math.min(...Object.values(adjustedPositions));
   }
 
-  if (pendingReveals.length > 0) {
-   setRevealedSideCards((prevCards) => [...prevCards, ...pendingReveals]);
+  if (animationSteps.length === 0) {
+   scheduleAnimationTimeout(() => {
+    checkWinner(advancedPositions);
+    setHorseAnimation(null);
+    setIsAnimating(false);
+   }, 350);
+   return;
   }
 
-  setHorsePositions(adjustedPositions);
+  animationSteps.forEach((step, stepIndex) => {
+   const revealDelay = 450 * (stepIndex + 1);
+   const adjustDelay = revealDelay + 450;
 
-  const winningSuit = Object.keys(adjustedPositions).find((suit) => adjustedPositions[suit] >= 5);
-  if (winningSuit) {
-   setWinner(winningSuit);
-   setGameState("winner");
-  }
+   scheduleAnimationTimeout(() => {
+    setRevealedSideCards((prevCards) => {
+     if (prevCards.length > step.index) {
+      return prevCards;
+     }
+     return [...prevCards, step.card];
+    });
+    setFlashingBonusIndices((prev) => [...prev, step.index]);
+   }, revealDelay);
+
+   scheduleAnimationTimeout(() => {
+    setFlashingBonusIndices((prev) => prev.filter((value) => value !== step.index));
+    setHorseAnimation({ suit: step.card.suit, direction: "retreat", key: Date.now() + step.index });
+    setHorsePositions((prevPositions) => {
+     const current = prevPositions[step.card.suit] || 0;
+     const nextValue = current > 0 ? current - 1 : 0;
+     return { ...prevPositions, [step.card.suit]: nextValue };
+    });
+   }, adjustDelay);
+  });
+
+  const finalDelay = 450 * animationSteps.length + 350;
+  const animationPadding = animationSteps.length ? 450 : 0;
+
+  scheduleAnimationTimeout(() => {
+   setHorseAnimation(null);
+   setFlashingBonusIndices([]);
+   checkWinner(adjustedPositions);
+   setIsAnimating(false);
+  }, finalDelay + animationPadding);
  };
 
  const resetGame = () => {
   setGameState("setup");
-  setPlayers([]);
   setPlayerInput("");
   setPendingPlayerName("");
+  setEditingPlayerId(null);
   setIsModalOpen(false);
   setHorsePositions({ ...DEFAULT_POSITIONS });
   setSideCards([]);
@@ -289,7 +434,10 @@ function App() {
   setDeck([]);
   setCurrentCard(null);
   setWinner(null);
-  localStorage.removeItem("horseRacingGame");
+  setHorseAnimation(null);
+  setFlashingBonusIndices([]);
+  setIsAnimating(false);
+  clearAnimationTimeouts();
  };
 
  return (
@@ -301,15 +449,19 @@ function App() {
      <InitScreen
       players={players}
       playerInput={playerInput}
-      onPlayerInputChange={setPlayerInput}
+      onPlayerInputChange={handlePlayerInputChange}
       onAddPlayer={openModal}
+      onEditPlayer={editPlayer}
       onRemovePlayer={removePlayer}
       onStartGame={startGame}
       suitColors={SUIT_COLORS}
+      maxPlayerNameLength={MAX_PLAYER_NAME_LENGTH}
      />
      <SelectBetModal
       isOpen={isModalOpen}
-      playerName={pendingPlayerName}
+      playerName={editingPlayer ? editingPlayer.name : pendingPlayerName}
+      pendingSuit={editingPlayer?.suit ?? null}
+      pendingDrinks={editingPlayer?.drinks ?? null}
       suits={SUITS}
       suitColors={SUIT_COLORS}
       onConfirm={confirmPlayer}
@@ -329,6 +481,9 @@ function App() {
      deckLength={deck.length}
      onDrawCard={drawCard}
      isWinner={Boolean(winner)}
+     horseAnimation={horseAnimation}
+     flashingBonusIndices={flashingBonusIndices}
+     isAnimating={isAnimating}
     />
    )}
 
@@ -344,6 +499,9 @@ function App() {
       deckLength={deck.length}
       onDrawCard={drawCard}
       isWinner
+      horseAnimation={horseAnimation}
+      flashingBonusIndices={flashingBonusIndices}
+      isAnimating={isAnimating}
      />
      {winner && (
       <WinnerScreen

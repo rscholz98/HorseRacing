@@ -7,9 +7,11 @@ const InitScreen = ({
  playerInput,
  onPlayerInputChange,
  onAddPlayer,
+ onEditPlayer,
  onRemovePlayer,
  onStartGame,
  suitColors,
+ maxPlayerNameLength = 20,
 }) => {
  return (
   <div className="setup-container">
@@ -25,6 +27,7 @@ const InitScreen = ({
       }
      }}
      placeholder="Enter player name"
+     maxLength={maxPlayerNameLength}
     />
     <button onClick={onAddPlayer}>Add Player</button>
    </div>
@@ -42,9 +45,14 @@ const InitScreen = ({
         {player.drinks} drink{player.drinks === 1 ? "" : "s"}
        </span>
       </div>
-      <button type="button" className="player-remove" onClick={() => onRemovePlayer(player.id)}>
-       ✕
-      </button>
+      <div className="player-item-actions">
+       <button type="button" className="player-edit" onClick={() => onEditPlayer(player.id)}>
+        ✎
+       </button>
+       <button type="button" className="player-remove" onClick={() => onRemovePlayer(player.id)}>
+        ✕
+       </button>
+      </div>
      </div>
     ))}
    </div>

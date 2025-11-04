@@ -2,28 +2,54 @@
 
 import React, { useEffect, useState } from "react";
 
-const SelectBetModal = ({ isOpen, playerName, suits, suitColors, onConfirm, onCancel }) => {
- const [selectedSuit, setSelectedSuit] = useState("");
- const [drinkCount, setDrinkCount] = useState(1);
+const SelectBetModal = ({
+ isOpen,
+ playerName,
+ pendingSuit,
+ pendingDrinks,
+ suits,
+ suitColors,
+ onConfirm,
+ onCancel,
+}) => {
+ const [selectedSuit, setSelectedSuit] = useState(pendingSuit || "");
+ const MIN_DRINKS = 1;
+ const MAX_DRINKS = 20;
+ const sanitizeDrinkCount = (value) => {
+  const numericValue = Number(value);
+  const parsed = Number.isFinite(numericValue) ? numericValue : MIN_DRINKS;
+  if (parsed < MIN_DRINKS) {
+   return MIN_DRINKS;
+  }
+  if (parsed > MAX_DRINKS) {
+   return MAX_DRINKS;
+  }
+  return Math.round(parsed);
+ };
+ const [drinkCount, setDrinkCount] = useState(sanitizeDrinkCount(pendingDrinks || MIN_DRINKS));
 
  useEffect(() => {
   if (isOpen) {
-   setSelectedSuit("");
-   setDrinkCount(1);
+   setSelectedSuit(pendingSuit || "");
+   setDrinkCount(sanitizeDrinkCount(pendingDrinks || MIN_DRINKS));
   }
- }, [isOpen]);
+ }, [isOpen, pendingSuit, pendingDrinks]);
 
  if (!isOpen) {
   return null;
  }
 
- const handleDrinkChange = (event) => {
-  const rawValue = parseInt(event.target.value, 10);
-  if (Number.isNaN(rawValue)) {
-   setDrinkCount(1);
-   return;
-  }
-  setDrinkCount(Math.min(Math.max(rawValue, 1), 20));
+ const adjustDrinkCount = (delta) => {
+  setDrinkCount((previous) => {
+   const nextValue = previous + delta;
+   if (nextValue < MIN_DRINKS) {
+    return MIN_DRINKS;
+   }
+   if (nextValue > MAX_DRINKS) {
+    return MAX_DRINKS;
+   }
+   return nextValue;
+  });
  };
 
  const submit = () => {
@@ -62,7 +88,33 @@ const SelectBetModal = ({ isOpen, playerName, suits, suitColors, onConfirm, onCa
 
     <div className="modal-section">
      <h3>Number of drinks</h3>
-     <input type="number" min="1" max="20" value={drinkCount} onChange={handleDrinkChange} />
+     <div className="modal-drink-selector">
+      <button
+       type="button"
+       className="modal-drink-control"
+       onClick={() => adjustDrinkCount(-1)}
+       disabled={drinkCount <= MIN_DRINKS}
+       aria-label="Decrease drinks"
+      >
+       -
+      </button>
+      <input
+       type="text"
+       className="modal-drink-display"
+       value={drinkCount}
+       disabled
+       aria-label="Selected drinks"
+      />
+      <button
+       type="button"
+       className="modal-drink-control"
+       onClick={() => adjustDrinkCount(1)}
+       disabled={drinkCount >= MAX_DRINKS}
+       aria-label="Increase drinks"
+      >
+       +
+      </button>
+     </div>
     </div>
 
     <div className="modal-actions">
