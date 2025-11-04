@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/HorseRacing/static/css/main.a69b6404.css",
-    "main.js": "/HorseRacing/static/js/main.6b229a6a.js",
-    "index.html": "/HorseRacing/index.html",
-    "main.a69b6404.css.map": "/HorseRacing/static/css/main.a69b6404.css.map",
-    "main.6b229a6a.js.map": "/HorseRacing/static/js/main.6b229a6a.js.map"
+    "main.css": "/static/css/main.ce017b99.css",
+    "main.js": "/static/js/main.6b229a6a.js",
+    "index.html": "/index.html",
+    "main.ce017b99.css.map": "/static/css/main.ce017b99.css.map",
+    "main.6b229a6a.js.map": "/static/js/main.6b229a6a.js.map"
   },
   "entrypoints": [
-    "static/css/main.a69b6404.css",
+    "static/css/main.ce017b99.css",
     "static/js/main.6b229a6a.js"
   ]
 }
