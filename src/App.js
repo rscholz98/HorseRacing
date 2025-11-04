@@ -98,7 +98,29 @@ const shuffleDeck = (deck) => {
 function App() {
  const savedState = useMemo(() => loadState(), []);
 
- const [gameState, setGameState] = useState(savedState?.gameState || "setup");
+ const deriveInitialGameState = () => {
+  const previousState = savedState?.gameState;
+
+  if (!previousState) {
+   return "setup";
+  }
+
+  if (previousState === "betting") {
+   return "setup";
+  }
+
+  if (previousState === "racing") {
+   return "play";
+  }
+
+  if (previousState === "finished") {
+   return savedState?.winner ? "winner" : "play";
+  }
+
+  return previousState;
+ };
+
+ const [gameState, setGameState] = useState(deriveInitialGameState);
  const [players, setPlayers] = useState(() => hydratePlayers(savedState));
  const [playerInput, setPlayerInput] = useState("");
  const [pendingPlayerName, setPendingPlayerName] = useState("");
